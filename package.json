@@ -1,0 +1,32 @@
+{
+  "name": "regel-cdk-conventions",
+  "version": "1.0.0",
+  "description": "Shared CDK conventions for REGEL AWS stacks: tagging, permissions boundary, synthesizer factory.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "prepare": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rock-Ent-Group-Engineering-Lab/regel-cdk-conventions.git"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.244.0",
+    "constructs": "^10.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "aws-cdk-lib": "^2.244.0",
+    "constructs": "^10.6.0",
+    "typescript": "^6.0.2"
+  }
+}
