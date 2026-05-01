@@ -7,8 +7,8 @@ Shared CDK conventions package. Consumed as a git-dep by every REGEL CDK repo th
 - `REGEL_CORE_ACCOUNT` / `REGEL_CORE_REGION` / `REGEL_CORE_ENV` — account + region constants
 - `REGEL_CORE_BOUNDARY_ARN` — the permissions boundary ARN that must be on every IAM role (keeps the name `ClawBoundary`; that's the agent-identity policy and stays)
 - `applyRegelCoreTags(scope, props)` — tags a stack + installs the boundary Aspect in one call
-- `regelCoreSynthesizer()` — `CliCredentialsStackSynthesizer`, the default everywhere
-- `regelCoreBootstrapSynthesizer({ qualifier })` — bootstrap synthesizer for Docker-image-asset stacks (currently only reg-fanreach-pipeline)
+- `regelCoreSynthesizer()` — `CliCredentialsStackSynthesizer`. **The only synthesizer you should use.** REGEL does not bootstrap CDK in the regel-core account; `ClawBoundary` + org-level SCPs make bootstrap actively broken. Docker image assets work under this synthesizer — bootstrap is not required.
+- `regelCoreBootstrapSynthesizer({ qualifier })` — **@deprecated.** Historical escape hatch for `reg-fanreach-pipeline` during Phase 4. Emits a console warning on call. Do not reach for this. If you think a new stack needs it, it doesn't.
 - Deprecated aliases (`CLAW_BOUNDARY_ARN`, `applyClawTags`, `ClawTagProps`) for the Claw → regel-core rename overlap period. Dropped in v2.
 
 ## AWS profile
