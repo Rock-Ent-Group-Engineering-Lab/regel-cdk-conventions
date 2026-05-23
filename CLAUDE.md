@@ -32,6 +32,10 @@ Always `regel-admin` (account 859287179937, us-east-2). The synthesizer uses cal
 
 Don't ship v2 until at least one foundation stack has migrated and validated the new tag value in production.
 
+## Consumer setup gotcha (TypeScript)
+
+Every consuming repo's `infra/package.json` needs both `@types/node` *and* `ts-node` as devDependencies, and `tsconfig.json` must include `"types": ["node"]` inside `compilerOptions` — otherwise `ts-node` can't resolve `path` / `__dirname` and CDK fails with a confusing `TS2591: Cannot find name 'path'`. Also: deploy via `npm run deploy` or `./node_modules/.bin/cdk` (not `npx cdk` — that pulls a fresh npx cache that can't see local types).
+
 ## What does NOT belong here
 
 This package is **conventions only**. Do not add:
