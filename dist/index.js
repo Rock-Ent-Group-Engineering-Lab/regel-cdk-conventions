@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.regelCoreBootstrapSynthesizer = exports.regelCoreSynthesizer = exports.applyClawTags = exports.applyRegelCoreTags = exports.CLAW_BOUNDARY_ARN = exports.REGEL_CORE_BOUNDARY_ARN = exports.REGEL_CORE_ENV = exports.REGEL_CORE_PROFILE = exports.REGEL_CORE_REGION = exports.REGEL_CORE_ACCOUNT = void 0;
+exports.bedrockInvokeResources = exports.RegelAppInferenceProfile = exports.REGEL_BEDROCK_MODELS = exports.regelCoreBootstrapSynthesizer = exports.regelCoreSynthesizer = exports.applyClawTags = exports.applyRegelCoreTags = exports.CLAW_BOUNDARY_ARN = exports.REGEL_CORE_BOUNDARY_ARN = exports.REGEL_CORE_ENV = exports.REGEL_CORE_PROFILE = exports.REGEL_CORE_REGION = exports.REGEL_CORE_ACCOUNT = void 0;
 var account_1 = require("./account");
 Object.defineProperty(exports, "REGEL_CORE_ACCOUNT", { enumerable: true, get: function () { return account_1.REGEL_CORE_ACCOUNT; } });
 Object.defineProperty(exports, "REGEL_CORE_REGION", { enumerable: true, get: function () { return account_1.REGEL_CORE_REGION; } });
@@ -15,3 +15,7 @@ Object.defineProperty(exports, "applyClawTags", { enumerable: true, get: functio
 var synthesizer_1 = require("./synthesizer");
 Object.defineProperty(exports, "regelCoreSynthesizer", { enumerable: true, get: function () { return synthesizer_1.regelCoreSynthesizer; } });
 Object.defineProperty(exports, "regelCoreBootstrapSynthesizer", { enumerable: true, get: function () { return synthesizer_1.regelCoreBootstrapSynthesizer; } });
+var bedrock_aip_1 = require("./bedrock-aip");
+Object.defineProperty(exports, "REGEL_BEDROCK_MODELS", { enumerable: true, get: function () { return bedrock_aip_1.REGEL_BEDROCK_MODELS; } });
+Object.defineProperty(exports, "RegelAppInferenceProfile", { enumerable: true, get: function () { return bedrock_aip_1.RegelAppInferenceProfile; } });
+Object.defineProperty(exports, "bedrockInvokeResources", { enumerable: true, get: function () { return bedrock_aip_1.bedrockInvokeResources; } });

@@ -22,3 +22,11 @@ export {
   regelCoreSynthesizer,
   regelCoreBootstrapSynthesizer,
 } from './synthesizer';
+
+export {
+  REGEL_BEDROCK_MODELS,
+  RegelBedrockModelId,
+  RegelAppInferenceProfile,
+  RegelAppInferenceProfileProps,
+  bedrockInvokeResources,
+} from './bedrock-aip';

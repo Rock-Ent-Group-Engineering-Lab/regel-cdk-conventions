@@ -9,6 +9,9 @@ Shared CDK conventions package. Consumed as a git-dep by every REGEL CDK repo th
 - `applyRegelCoreTags(scope, props)` — tags a stack + installs the boundary Aspect in one call
 - `regelCoreSynthesizer()` — `CliCredentialsStackSynthesizer`. **The only synthesizer you should use.** REGEL does not bootstrap CDK in the regel-core account; `ClawBoundary` + org-level SCPs make bootstrap actively broken. Docker image assets work under this synthesizer — bootstrap is not required.
 - `regelCoreBootstrapSynthesizer({ qualifier })` — **@deprecated.** Historical escape hatch for `reg-fanreach-pipeline` during Phase 4. Emits a console warning on call. Do not reach for this. If you think a new stack needs it, it doesn't.
+- `RegelAppInferenceProfile` — wraps an AWS-managed cross-region inference profile (e.g. `us.anthropic.claude-sonnet-4-6`) as an Application Inference Profile so Bedrock invocations carry the stack's cost-allocation tags. Publishes the AIP ARN to `/regel-core/<appSlug>/bedrock-aip/<modelShortName>` so the runtime reads from SSM instead of hardcoding `us.anthropic.*`.
+- `bedrockInvokeResources(aips)` — companion helper that returns the IAM resource ARNs you need to grant `bedrock:InvokeModel` on (the AIP ARN, the underlying system inference-profile ARN, and the foundation-model wildcard).
+- `REGEL_BEDROCK_MODELS` — the canonical model-ID enum used for AIP `modelId`. Add new entries here when REGEL adopts a new model.
 - Deprecated aliases (`CLAW_BOUNDARY_ARN`, `applyClawTags`, `ClawTagProps`) for the Claw → regel-core rename overlap period. Dropped in v2.
 
 ## AWS profile
@@ -35,6 +38,52 @@ Don't ship v2 until at least one foundation stack has migrated and validated the
 ## Consumer setup gotcha (TypeScript)
 
 Every consuming repo's `infra/package.json` needs both `@types/node` *and* `ts-node` as devDependencies, and `tsconfig.json` must include `"types": ["node"]` inside `compilerOptions` — otherwise `ts-node` can't resolve `path` / `__dirname` and CDK fails with a confusing `TS2591: Cannot find name 'path'`. Also: deploy via `npm run deploy` or `./node_modules/.bin/cdk` (not `npx cdk` — that pulls a fresh npx cache that can't see local types).
+
+## Bedrock cost attribution (mandatory)
+
+Every REGEL stack that invokes Bedrock at runtime **must** provision one `RegelAppInferenceProfile` per (app, model) and have the runtime call Bedrock with the resulting **AIP ARN** as `modelId` — never the raw `us.anthropic.*` / `global.anthropic.*` system profile ID, never a foundation-model ARN.
+
+**Why:** raw model IDs collapse all REGEL Bedrock spend into one Cost Explorer line. Application Inference Profiles propagate the parent stack's six standard tags onto every invocation, so Cost Explorer can group Bedrock cost by `Project` / `Owner` / `CostCenter` exactly like Lambda / Fargate / S3.
+
+**Pattern:**
+
+```ts
+import {
+  RegelAppInferenceProfile,
+  REGEL_BEDROCK_MODELS,
+  bedrockInvokeResources,
+  applyRegelCoreTags,
+} from 'regel-cdk-conventions';
+
+applyRegelCoreTags(this, { project: 'quarry', environment: 'production', owner: 'conor' });
+
+const sonnet = new RegelAppInferenceProfile(this, 'QuarrySonnet', {
+  appSlug: 'quarry',
+  modelId: REGEL_BEDROCK_MODELS.CLAUDE_SONNET_4_6,
+});
+const haiku = new RegelAppInferenceProfile(this, 'QuarryHaiku', {
+  appSlug: 'quarry',
+  modelId: REGEL_BEDROCK_MODELS.CLAUDE_HAIKU_4_5,
+});
+
+runtimeRole.addToPrincipalPolicy(new iam.PolicyStatement({
+  actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
+  resources: bedrockInvokeResources([sonnet, haiku]),
+}));
+```
+
+The runtime reads each ARN from SSM at startup:
+
+```python
+import boto3, os
+ssm = boto3.client('ssm')
+SONNET_ARN = ssm.get_parameter(Name='/regel-core/quarry/bedrock-aip/claude-sonnet-4-6')['Parameter']['Value']
+bedrock.converse(modelId=SONNET_ARN, ...)
+```
+
+For Mac-mini-hosted apps without a Lambda role (`app-penny`, `app-sage`), grant `ssm:GetParameter` on the parameter and `bedrock:InvokeModel` on the resources from `bedrockInvokeResources(...)` to the IAM user that the daemon assumes.
+
+When you add a new model to REGEL, add the system inference-profile ID to `REGEL_BEDROCK_MODELS` in this package — don't string-literal it elsewhere.
 
 ## What does NOT belong here
 
