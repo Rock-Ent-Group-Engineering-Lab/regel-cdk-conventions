@@ -77,9 +77,12 @@ class RegelAppInferenceProfile extends constructs_1.Construct {
         this.modelId = props.modelId;
         const sourceArn = `arn:aws:bedrock:${account_1.REGEL_CORE_REGION}:${account_1.REGEL_CORE_ACCOUNT}:` +
             `inference-profile/${props.modelId}`;
+        // Bedrock AIP description regex `^([0-9a-zA-Z:.][ _-]?)+$` allows alnum,
+        // colon, dot, and at most one space/underscore/hyphen between alnums.
+        // No arrows, em-dashes, slashes, or runs of separators.
         const cfn = new bedrock.CfnApplicationInferenceProfile(this, 'Profile', {
             inferenceProfileName: profileName,
-            description: props.description ?? `${props.appSlug} → ${props.modelId}`,
+            description: props.description ?? `${props.appSlug}-${props.modelId}`,
             modelSource: {
                 copyFrom: sourceArn,
             },

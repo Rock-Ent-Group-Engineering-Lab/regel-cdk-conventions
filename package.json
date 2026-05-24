@@ -1,6 +1,6 @@
 {
   "name": "regel-cdk-conventions",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Shared CDK conventions for REGEL AWS stacks: tagging, permissions boundary, synthesizer factory.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
