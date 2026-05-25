@@ -9,6 +9,9 @@ export declare const REGEL_BEDROCK_MODELS: {
     readonly CLAUDE_SONNET_4_6: "us.anthropic.claude-sonnet-4-6";
     readonly CLAUDE_OPUS_4_7: "us.anthropic.claude-opus-4-7";
     readonly CLAUDE_HAIKU_4_5: "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+    readonly CLAUDE_SONNET_4_6_GLOBAL: "global.anthropic.claude-sonnet-4-6";
+    readonly CLAUDE_OPUS_4_7_GLOBAL: "global.anthropic.claude-opus-4-7";
+    readonly CLAUDE_HAIKU_4_5_GLOBAL: "global.anthropic.claude-haiku-4-5-20251001-v1:0";
     readonly NOVA_MICRO: "us.amazon.nova-micro-v1:0";
 };
 export type RegelBedrockModelId = typeof REGEL_BEDROCK_MODELS[keyof typeof REGEL_BEDROCK_MODELS];

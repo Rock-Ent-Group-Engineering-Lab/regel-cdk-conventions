@@ -14,6 +14,9 @@ export const REGEL_BEDROCK_MODELS = {
   CLAUDE_SONNET_4_6: 'us.anthropic.claude-sonnet-4-6',
   CLAUDE_OPUS_4_7: 'us.anthropic.claude-opus-4-7',
   CLAUDE_HAIKU_4_5: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+  CLAUDE_SONNET_4_6_GLOBAL: 'global.anthropic.claude-sonnet-4-6',
+  CLAUDE_OPUS_4_7_GLOBAL: 'global.anthropic.claude-opus-4-7',
+  CLAUDE_HAIKU_4_5_GLOBAL: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
   NOVA_MICRO: 'us.amazon.nova-micro-v1:0',
 } as const;
 
@@ -120,18 +123,20 @@ export function bedrockInvokeResources(
 }
 
 function shortenModelId(modelId: string): string {
-  // us.anthropic.claude-sonnet-4-6 → claude-sonnet-4-6
+  // us.anthropic.claude-sonnet-4-6              → claude-sonnet-4-6
+  // global.anthropic.claude-sonnet-4-6          → claude-sonnet-4-6-global
   // us.anthropic.claude-haiku-4-5-20251001-v1:0 → claude-haiku-4-5
-  // us.amazon.nova-micro-v1:0 → nova-micro
+  // global.anthropic.claude-haiku-4-5-20251001-v1:0 → claude-haiku-4-5-global
+  // us.amazon.nova-micro-v1:0                   → nova-micro
+  const isGlobal = modelId.startsWith('global.');
   const stripped = modelId
     .replace(/^us\./, '')
     .replace(/^global\./, '')
     .replace(/^anthropic\./, '')
     .replace(/^amazon\./, '');
-  // Drop `-YYYYMMDD-vN:0` suffix on Anthropic dated models
   const undated = stripped.replace(/-\d{8}-v\d+:\d+$/, '');
-  // Drop `-vN:N` plain version suffix on Amazon models
-  return undated.replace(/-v\d+:\d+$/, '');
+  const trimmed = undated.replace(/-v\d+:\d+$/, '');
+  return isGlobal ? `${trimmed}-global` : trimmed;
 }
 
 // Cheap unit-style smoke for the slug helper so we notice if AWS introduces
