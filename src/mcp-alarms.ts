@@ -96,7 +96,7 @@ export function mcpLambdaAlarms(scope: Construct, props: McpLambdaAlarmsProps): 
     alarmDescription:
       `${props.alarmPrefix}: Lambda Errors in 2 of the last 3 five-minute windows ` +
       `(one transient window does not page). Check ${logGroup}. ` +
-      `A 60s REPORT with Status: timeout means a held-open stream, see the stuck alarm.`,
+      `A ${timeoutSeconds}s REPORT with Status: timeout means a held-open stream, see the stuck alarm.`,
     metric: props.fn.metricErrors({ period: FIVE_MINUTES, statistic: 'Sum' }),
     threshold: 1,
     evaluationPeriods: 3,
