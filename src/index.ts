@@ -30,3 +30,9 @@ export {
   RegelAppInferenceProfileProps,
   bedrockInvokeResources,
 } from './bedrock-aip';
+
+export {
+  McpLambdaAlarmsProps,
+  McpLambdaAlarms,
+  mcpLambdaAlarms,
+} from './mcp-alarms';

@@ -12,6 +12,7 @@ Shared CDK conventions package. Consumed as a git-dep by every REGEL CDK repo th
 - `RegelAppInferenceProfile` — wraps an AWS-managed cross-region inference profile (e.g. `us.anthropic.claude-sonnet-4-6`) as an Application Inference Profile so Bedrock invocations carry the stack's cost-allocation tags. Publishes the AIP ARN to `/regel-core/<appSlug>/bedrock-aip/<modelShortName>` so the runtime reads from SSM instead of hardcoding `us.anthropic.*`.
 - `bedrockInvokeResources(aips)` — companion helper that returns the IAM resource ARNs you need to grant `bedrock:InvokeModel` on (the AIP ARN, the underlying system inference-profile ARN, and the foundation-model wildcard).
 - `REGEL_BEDROCK_MODELS` — the canonical model-ID enum used for AIP `modelId`. Add new entries here when REGEL adopts a new model.
+- `mcpLambdaAlarms(scope, props)` — the alarm shape for a Lambda-hosted MCP server (REG-634): Errors in 2 of 3 five-minute windows, a `Duration p99 >= 80% of timeout` stuck-stream canary, optional DLQ and EMF infra-failure alarms, alarm actions only (no OK notifications). Default construct ids match the fleet's original alarms so adoption is an in-place update. Every `mcp-reg-*` stack uses it; `create-regel-repo`'s MCP template emits it.
 - Deprecated aliases (`CLAW_BOUNDARY_ARN`, `applyClawTags`, `ClawTagProps`) for the Claw → regel-core rename overlap period. Dropped in v2.
 
 ## AWS profile

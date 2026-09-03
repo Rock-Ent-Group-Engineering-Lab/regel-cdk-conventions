@@ -3,3 +3,4 @@ export { REGEL_CORE_BOUNDARY_ARN, CLAW_BOUNDARY_ARN, } from './boundary';
 export { RegelCoreTagProps, ClawTagProps, applyRegelCoreTags, applyClawTags, } from './tagging';
 export { BootstrapSynthesizerOptions, regelCoreSynthesizer, regelCoreBootstrapSynthesizer, } from './synthesizer';
 export { REGEL_BEDROCK_MODELS, RegelBedrockModelId, RegelAppInferenceProfile, RegelAppInferenceProfileProps, bedrockInvokeResources, } from './bedrock-aip';
+export { McpLambdaAlarmsProps, McpLambdaAlarms, mcpLambdaAlarms, } from './mcp-alarms';
