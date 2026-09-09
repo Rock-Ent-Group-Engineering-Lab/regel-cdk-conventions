@@ -46,26 +46,30 @@ applyRegelCoreTags(stack, {
 
 ## Deploy
 
-Every CDK deploy must use `AWS_PROFILE=regel-admin`:
+From the consuming repo's infrastructure directory, use its documented deploy
+script or installed CDK binary with `AWS_PROFILE=regel-admin`:
 
 ```bash
-AWS_PROFILE=regel-admin cdk deploy
+AWS_PROFILE=regel-admin ./node_modules/.bin/cdk deploy
 ```
 
 The synthesizer uses `CliCredentialsStackSynthesizer`, so it inherits whichever profile is active. If you deploy without `regel-admin`, it will target the wrong account or fail.
 
 ## Docker image assets
 
-If a stack uses `DockerImageAsset` or `ecs.ContainerImage.fromAsset`, it needs bootstrap. Use `regelCoreBootstrapSynthesizer()` instead, and ensure the account is bootstrapped:
+Use `regelCoreSynthesizer()` for Docker image assets too, including
+`DockerImageAsset` and `ecs.ContainerImage.fromAsset`. Its
+`CliCredentialsStackSynthesizer` publishes assets with the caller's credentials;
+Docker assets do not require switching synthesizers.
 
-```bash
-AWS_PROFILE=regel-admin \
-  cdk bootstrap --qualifier regelcore \
-  --custom-permissions-boundary ClawBoundary \
-  aws://859287179937/us-east-2
-```
+**Do not run `cdk bootstrap` in REGEL Core.** The permissions boundary and
+organization SCPs are incompatible with the standard bootstrap-role path.
+`regelCoreBootstrapSynthesizer()` is a deprecated compatibility export for
+historical callers, not a setup step for new stacks.
 
-Only one repo (reg-fanreach-pipeline) needs this currently.
+The operating contract is in [CLAUDE.md](CLAUDE.md#what-this-package-owns);
+the factory and compatibility notes live in
+[src/synthesizer.ts](src/synthesizer.ts).
 
 ## Migration path from legacy `tagging.ts`
 
