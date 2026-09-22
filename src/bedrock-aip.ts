@@ -14,10 +14,12 @@ export const REGEL_BEDROCK_MODELS = {
   CLAUDE_SONNET_5: 'us.anthropic.claude-sonnet-5',
   CLAUDE_SONNET_4_6: 'us.anthropic.claude-sonnet-4-6',
   CLAUDE_OPUS_4_7: 'us.anthropic.claude-opus-4-7',
+  CLAUDE_OPUS_5_5: 'us.anthropic.claude-opus-5-5',
   CLAUDE_HAIKU_4_5: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
   CLAUDE_SONNET_5_GLOBAL: 'global.anthropic.claude-sonnet-5',
   CLAUDE_SONNET_4_6_GLOBAL: 'global.anthropic.claude-sonnet-4-6',
   CLAUDE_OPUS_4_7_GLOBAL: 'global.anthropic.claude-opus-4-7',
+  CLAUDE_OPUS_5_5_GLOBAL: 'global.anthropic.claude-opus-5-5',
   CLAUDE_HAIKU_4_5_GLOBAL: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
   NOVA_MICRO: 'us.amazon.nova-micro-v1:0',
 } as const;
@@ -126,6 +128,7 @@ export function bedrockInvokeResources(
 
 function shortenModelId(modelId: string): string {
   // us.anthropic.claude-sonnet-4-6              → claude-sonnet-4-6
+  // us.anthropic.claude-opus-5-5                → claude-opus-5-5
   // global.anthropic.claude-sonnet-4-6          → claude-sonnet-4-6-global
   // us.anthropic.claude-haiku-4-5-20251001-v1:0 → claude-haiku-4-5
   // global.anthropic.claude-haiku-4-5-20251001-v1:0 → claude-haiku-4-5-global
