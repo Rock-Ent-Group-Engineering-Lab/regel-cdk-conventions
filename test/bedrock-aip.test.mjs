@@ -35,3 +35,14 @@ test('global Opus 5.5 gets the -global suffix', () => {
     InferenceProfileName: 'probe-claude-opus-5-5-global',
   });
 });
+
+test('Sonnet 5.5 is global-only and shortens to claude-sonnet-5-5-global', () => {
+  // us-east-2 has no us.anthropic.claude-sonnet-5-5 profile, only the global one.
+  assert.equal(REGEL_BEDROCK_MODELS.CLAUDE_SONNET_5_5_GLOBAL, 'global.anthropic.claude-sonnet-5-5');
+  const t = synth(REGEL_BEDROCK_MODELS.CLAUDE_SONNET_5_5_GLOBAL);
+  t.hasResourceProperties('AWS::Bedrock::ApplicationInferenceProfile', {
+    InferenceProfileName: 'probe-claude-sonnet-5-5-global',
+    ModelSource: { CopyFrom: 'arn:aws:bedrock:us-east-2:859287179937:inference-profile/global.anthropic.claude-sonnet-5-5' },
+  });
+  t.hasResourceProperties('AWS::SSM::Parameter', { Name: '/regel-core/probe/bedrock-aip/claude-sonnet-5-5-global' });
+});

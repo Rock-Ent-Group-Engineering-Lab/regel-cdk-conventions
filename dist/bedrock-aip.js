@@ -52,6 +52,7 @@ exports.REGEL_BEDROCK_MODELS = {
     CLAUDE_OPUS_5_5: 'us.anthropic.claude-opus-5-5',
     CLAUDE_HAIKU_4_5: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
     CLAUDE_SONNET_5_GLOBAL: 'global.anthropic.claude-sonnet-5',
+    CLAUDE_SONNET_5_5_GLOBAL: 'global.anthropic.claude-sonnet-5-5',
     CLAUDE_SONNET_4_6_GLOBAL: 'global.anthropic.claude-sonnet-4-6',
     CLAUDE_OPUS_4_7_GLOBAL: 'global.anthropic.claude-opus-4-7',
     CLAUDE_OPUS_5_5_GLOBAL: 'global.anthropic.claude-opus-5-5',
