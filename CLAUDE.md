@@ -82,7 +82,7 @@ SONNET_ARN = ssm.get_parameter(Name='/regel-core/quarry/bedrock-aip/claude-sonne
 bedrock.converse(modelId=SONNET_ARN, ...)
 ```
 
-For Mac-mini-hosted apps without a Lambda role (`app-penny`, `app-sage`), grant `ssm:GetParameter` on the parameter and `bedrock:InvokeModel` on the resources from `bedrockInvokeResources(...)` to the IAM user that the daemon assumes.
+For Mac-mini-hosted apps without a Lambda role (`app-penny`), grant `ssm:GetParameter` on the parameter and `bedrock:InvokeModel` on the resources from `bedrockInvokeResources(...)` to the IAM user that the daemon assumes.
 
 When you add a new model to REGEL, add the system inference-profile ID to `REGEL_BEDROCK_MODELS` in this package — don't string-literal it elsewhere.
 
