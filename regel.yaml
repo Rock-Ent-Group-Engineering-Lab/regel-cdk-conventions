@@ -1,0 +1,12 @@
+# regel.yaml: what this repo is. Spec: regel-devtools/skills/create-regel-repo/references/manifest.md
+kind: other
+name: CDK conventions
+slug: regel-cdk-conventions
+stage: live
+owner: Conor Kenney
+team: regel-built
+hosts: []
+stacks: []
+stores: []
+reads: []
+linear: ["project:Infra, Reliability & Cost"]

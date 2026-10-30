@@ -1,0 +1,19 @@
+# Copy to .github/workflows/manifest-check.yml in any REGEL repo that has a regel.yaml.
+# Runs regel-devtools' manifest check (spec: create-regel-repo/references/manifest.md) through the action in
+# regel-devtools/.github/actions/manifest-check. Offline checks only: the cross-checks against source intelligence,
+# the workspace map and the feedback service need the neighbouring repos, so they run on a workstation
+# (`check_manifest.py --workspace`) and in the sweep.
+name: Manifest
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Rock-Ent-Group-Engineering-Lab/regel-devtools/.github/actions/manifest-check@main
