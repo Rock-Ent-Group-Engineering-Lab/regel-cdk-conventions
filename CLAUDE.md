@@ -86,6 +86,8 @@ For Mac-mini-hosted apps without a Lambda role (`app-penny`), grant `ssm:GetPara
 
 When you add a new model to REGEL, add the system inference-profile ID to `REGEL_BEDROCK_MODELS` in this package — don't string-literal it elsewhere.
 
+Titan Text Embeddings V2 has no system profile, so `REGEL_BEDROCK_MODELS.TITAN_EMBED_V2` copies from the regional foundation model; `bedrockInvokeResources` grants the AIP and that one foundation-model ARN. Call `invoke_model` with the AIP ARN as `modelId`, same as for Claude (verified: the embedding comes back and the invocation log shows the AIP ARN).
+
 ## What does NOT belong here
 
 This package is **conventions only**. Do not add:

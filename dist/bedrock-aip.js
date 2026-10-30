@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports._shortenModelIdForTest = exports.RegelAppInferenceProfile = exports.REGEL_BEDROCK_MODELS = void 0;
+exports._shortenModelIdForTest = exports.RegelAppInferenceProfile = exports.FOUNDATION_MODEL_IDS = exports.REGEL_BEDROCK_MODELS = void 0;
 exports.bedrockInvokeResources = bedrockInvokeResources;
 const bedrock = __importStar(require("aws-cdk-lib/aws-bedrock"));
 const ssm = __importStar(require("aws-cdk-lib/aws-ssm"));
@@ -61,7 +61,21 @@ exports.REGEL_BEDROCK_MODELS = {
     CLAUDE_HAIKU_4_5_GLOBAL: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
     CLAUDE_HAIKU_5_5_GLOBAL: 'global.anthropic.claude-haiku-5-5',
     NOVA_MICRO: 'us.amazon.nova-micro-v1:0',
+    /**
+     * Titan Text Embeddings V2. A foundation model with no system inference
+     * profile, so its AIP copies from the foundation-model ARN (see
+     * FOUNDATION_MODEL_IDS) and invokes in us-east-2 only.
+     */
+    TITAN_EMBED_V2: 'amazon.titan-embed-text-v2:0',
 };
+/**
+ * Models that have no system inference profile. Their AIP copies from the
+ * regional foundation-model ARN instead of an `inference-profile/` ARN.
+ */
+exports.FOUNDATION_MODEL_IDS = [exports.REGEL_BEDROCK_MODELS.TITAN_EMBED_V2];
+function isFoundationModel(modelId) {
+    return exports.FOUNDATION_MODEL_IDS.includes(modelId);
+}
 /**
  * Wraps an AWS-managed cross-region inference profile (e.g.
  * `us.anthropic.claude-sonnet-4-6`) as an Application Inference Profile so
@@ -86,8 +100,10 @@ class RegelAppInferenceProfile extends constructs_1.Construct {
         const profileName = `${props.appSlug}-${modelShort}`;
         this.profileName = profileName;
         this.modelId = props.modelId;
-        const sourceArn = `arn:aws:bedrock:${account_1.REGEL_CORE_REGION}:${account_1.REGEL_CORE_ACCOUNT}:` +
-            `inference-profile/${props.modelId}`;
+        const sourceArn = isFoundationModel(props.modelId)
+            ? `arn:aws:bedrock:${account_1.REGEL_CORE_REGION}::foundation-model/${props.modelId}`
+            : `arn:aws:bedrock:${account_1.REGEL_CORE_REGION}:${account_1.REGEL_CORE_ACCOUNT}:` +
+                `inference-profile/${props.modelId}`;
         // Bedrock AIP description regex `^([0-9a-zA-Z:.][ _-]?)+$` allows alnum,
         // colon, dot, and at most one space/underscore/hyphen between alnums.
         // No arrows, em-dashes, slashes, or runs of separators.
@@ -118,6 +134,12 @@ function bedrockInvokeResources(aips) {
     const resources = new Set();
     for (const aip of aips) {
         resources.add(aip.profileArn);
+        if (isFoundationModel(aip.modelId)) {
+            // No system profile to authorize: the AIP copies this one regional
+            // foundation model, and that is all the role needs besides the AIP.
+            resources.add(`arn:aws:bedrock:${account_1.REGEL_CORE_REGION}::foundation-model/${aip.modelId}`);
+            continue;
+        }
         resources.add(`arn:aws:bedrock:${account_1.REGEL_CORE_REGION}:${account_1.REGEL_CORE_ACCOUNT}:` +
             `inference-profile/${aip.modelId}`);
         // foundation-model ARNs are region-less in policies (`*`); collapse with
@@ -127,9 +149,6 @@ function bedrockInvokeResources(aips) {
         }
         else if (aip.modelId.includes('amazon.nova')) {
             resources.add('arn:aws:bedrock:*::foundation-model/amazon.nova*');
-        }
-        else if (aip.modelId.includes('amazon.titan')) {
-            resources.add('arn:aws:bedrock:*::foundation-model/amazon.titan*');
         }
     }
     return Array.from(resources);
@@ -141,6 +160,10 @@ function shortenModelId(modelId) {
     // us.anthropic.claude-haiku-4-5-20251001-v1:0 → claude-haiku-4-5
     // global.anthropic.claude-haiku-4-5-20251001-v1:0 → claude-haiku-4-5-global
     // us.amazon.nova-micro-v1:0                   → nova-micro
+    // amazon.titan-embed-text-v2:0                → titan-embed-text-v2
+    if (modelId.startsWith('amazon.titan')) {
+        return modelId.replace(/^amazon\./, '').replace(/:\d+$/, '');
+    }
     const isGlobal = modelId.startsWith('global.');
     const stripped = modelId
         .replace(/^us\./, '')
