@@ -21,8 +21,19 @@ export declare const REGEL_BEDROCK_MODELS: {
     readonly CLAUDE_HAIKU_4_5_GLOBAL: "global.anthropic.claude-haiku-4-5-20251001-v1:0";
     readonly CLAUDE_HAIKU_5_5_GLOBAL: "global.anthropic.claude-haiku-5-5";
     readonly NOVA_MICRO: "us.amazon.nova-micro-v1:0";
+    /**
+     * Titan Text Embeddings V2. A foundation model with no system inference
+     * profile, so its AIP copies from the foundation-model ARN (see
+     * FOUNDATION_MODEL_IDS) and invokes in us-east-2 only.
+     */
+    readonly TITAN_EMBED_V2: "amazon.titan-embed-text-v2:0";
 };
 export type RegelBedrockModelId = typeof REGEL_BEDROCK_MODELS[keyof typeof REGEL_BEDROCK_MODELS];
+/**
+ * Models that have no system inference profile. Their AIP copies from the
+ * regional foundation-model ARN instead of an `inference-profile/` ARN.
+ */
+export declare const FOUNDATION_MODEL_IDS: readonly string[];
 export interface RegelAppInferenceProfileProps {
     /** Short app slug used in the AIP name and SSM path. e.g. `quarry`, `penny`. */
     readonly appSlug: string;

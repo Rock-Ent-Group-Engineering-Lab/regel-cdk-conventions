@@ -26,9 +26,25 @@ export const REGEL_BEDROCK_MODELS = {
   CLAUDE_HAIKU_4_5_GLOBAL: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
   CLAUDE_HAIKU_5_5_GLOBAL: 'global.anthropic.claude-haiku-5-5',
   NOVA_MICRO: 'us.amazon.nova-micro-v1:0',
+  /**
+   * Titan Text Embeddings V2. A foundation model with no system inference
+   * profile, so its AIP copies from the foundation-model ARN (see
+   * FOUNDATION_MODEL_IDS) and invokes in us-east-2 only.
+   */
+  TITAN_EMBED_V2: 'amazon.titan-embed-text-v2:0',
 } as const;
 
 export type RegelBedrockModelId = typeof REGEL_BEDROCK_MODELS[keyof typeof REGEL_BEDROCK_MODELS];
+
+/**
+ * Models that have no system inference profile. Their AIP copies from the
+ * regional foundation-model ARN instead of an `inference-profile/` ARN.
+ */
+export const FOUNDATION_MODEL_IDS: readonly string[] = [REGEL_BEDROCK_MODELS.TITAN_EMBED_V2];
+
+function isFoundationModel(modelId: string): boolean {
+  return FOUNDATION_MODEL_IDS.includes(modelId);
+}
 
 export interface RegelAppInferenceProfileProps {
   /** Short app slug used in the AIP name and SSM path. e.g. `quarry`, `penny`. */
@@ -75,9 +91,10 @@ export class RegelAppInferenceProfile extends Construct {
     this.profileName = profileName;
     this.modelId = props.modelId;
 
-    const sourceArn =
-      `arn:aws:bedrock:${REGEL_CORE_REGION}:${REGEL_CORE_ACCOUNT}:` +
-      `inference-profile/${props.modelId}`;
+    const sourceArn = isFoundationModel(props.modelId)
+      ? `arn:aws:bedrock:${REGEL_CORE_REGION}::foundation-model/${props.modelId}`
+      : `arn:aws:bedrock:${REGEL_CORE_REGION}:${REGEL_CORE_ACCOUNT}:` +
+        `inference-profile/${props.modelId}`;
 
     // Bedrock AIP description regex `^([0-9a-zA-Z:.][ _-]?)+$` allows alnum,
     // colon, dot, and at most one space/underscore/hyphen between alnums.
@@ -113,6 +130,12 @@ export function bedrockInvokeResources(
   const resources = new Set<string>();
   for (const aip of aips) {
     resources.add(aip.profileArn);
+    if (isFoundationModel(aip.modelId)) {
+      // No system profile to authorize: the AIP copies this one regional
+      // foundation model, and that is all the role needs besides the AIP.
+      resources.add(`arn:aws:bedrock:${REGEL_CORE_REGION}::foundation-model/${aip.modelId}`);
+      continue;
+    }
     resources.add(
       `arn:aws:bedrock:${REGEL_CORE_REGION}:${REGEL_CORE_ACCOUNT}:` +
         `inference-profile/${aip.modelId}`,
@@ -123,8 +146,6 @@ export function bedrockInvokeResources(
       resources.add('arn:aws:bedrock:*::foundation-model/anthropic.claude*');
     } else if (aip.modelId.includes('amazon.nova')) {
       resources.add('arn:aws:bedrock:*::foundation-model/amazon.nova*');
-    } else if (aip.modelId.includes('amazon.titan')) {
-      resources.add('arn:aws:bedrock:*::foundation-model/amazon.titan*');
     }
   }
   return Array.from(resources);
@@ -137,6 +158,10 @@ function shortenModelId(modelId: string): string {
   // us.anthropic.claude-haiku-4-5-20251001-v1:0 → claude-haiku-4-5
   // global.anthropic.claude-haiku-4-5-20251001-v1:0 → claude-haiku-4-5-global
   // us.amazon.nova-micro-v1:0                   → nova-micro
+  // amazon.titan-embed-text-v2:0                → titan-embed-text-v2
+  if (modelId.startsWith('amazon.titan')) {
+    return modelId.replace(/^amazon\./, '').replace(/:\d+$/, '');
+  }
   const isGlobal = modelId.startsWith('global.');
   const stripped = modelId
     .replace(/^us\./, '')
