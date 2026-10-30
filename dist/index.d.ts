@@ -4,3 +4,4 @@ export { RegelCoreTagProps, ClawTagProps, applyRegelCoreTags, applyClawTags, } f
 export { BootstrapSynthesizerOptions, regelCoreSynthesizer, regelCoreBootstrapSynthesizer, } from './synthesizer';
 export { REGEL_BEDROCK_MODELS, RegelBedrockModelId, RegelAppInferenceProfile, RegelAppInferenceProfileProps, bedrockInvokeResources, } from './bedrock-aip';
 export { McpLambdaAlarmsProps, McpLambdaAlarms, mcpLambdaAlarms, } from './mcp-alarms';
+export { RegelRuleTargetProps, RegelRuleTarget, regelRuleTarget, } from './rule-target';

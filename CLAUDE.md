@@ -13,6 +13,7 @@ Shared CDK conventions package. Consumed as a git-dep by every REGEL CDK repo th
 - `bedrockInvokeResources(aips)` — companion helper that returns the IAM resource ARNs you need to grant `bedrock:InvokeModel` on (the AIP ARN, the underlying system inference-profile ARN, and the foundation-model wildcard).
 - `REGEL_BEDROCK_MODELS` — the canonical model-ID enum used for AIP `modelId`. Add new entries here when REGEL adopts a new model.
 - `mcpLambdaAlarms(scope, props)` — the alarm shape for a Lambda-hosted MCP server (REG-634): Errors in 2 of 3 five-minute windows, a `Duration p99 >= 80% of timeout` stuck-stream canary, optional DLQ and EMF infra-failure alarms, alarm actions only (no OK notifications). Default construct ids match the fleet's original alarms so adoption is an in-place update. Every `mcp-reg-*` stack uses it; `create-regel-repo`'s MCP template emits it.
+- `regelRuleTarget(scope, id, props)` — a Lambda on an EventBridge rule, wired the REGEL way (fleet audit triage, REG-1562). One call attaches the function to your rule and adds the failure handling every rule target needs: a DLQ for the rule target (SSE-SQS, literal name, send policy pinned to that rule), an `onFailure` SQS destination on the function (a rule DLQ never sees an error the handler throws), a depth alarm (>= 1) on each queue, and an optional missed-run alarm sized to the schedule, all notifying `regel-core-pipeline-alerts` (alarm actions only). Lambda targets only; ECS and SNS targets keep their own `deadLetterQueue`. Use it for every new Lambda on a rule; deployed hand-written equivalents are left alone. Gotchas and usage: [Rule targets](#rule-targets-regelruletarget) below.
 - Deprecated aliases (`CLAW_BOUNDARY_ARN`, `applyClawTags`, `ClawTagProps`) for the Claw → regel-core rename overlap period. Dropped in v2.
 
 ## AWS profile
@@ -87,6 +88,42 @@ For Mac-mini-hosted apps without a Lambda role (`app-penny`), grant `ssm:GetPara
 When you add a new model to REGEL, add the system inference-profile ID to `REGEL_BEDROCK_MODELS` in this package — don't string-literal it elsewhere.
 
 Titan Text Embeddings V2 has no system profile, so `REGEL_BEDROCK_MODELS.TITAN_EMBED_V2` copies from the regional foundation model; `bedrockInvokeResources` grants the AIP and that one foundation-model ARN. Call `invoke_model` with the AIP ARN as `modelId`, same as for Claude (verified: the embedding comes back and the invocation log shows the AIP ARN).
+
+## Rule targets (`regelRuleTarget`)
+
+Every new Lambda on an EventBridge rule (a schedule or an event pattern) goes through `regelRuleTarget`, in `src/rule-target.ts` (the header comment there has the reasoning):
+
+```ts
+import * as events from 'aws-cdk-lib/aws-events';
+import { regelRuleTarget } from 'regel-cdk-conventions';
+
+const rule = new events.Rule(this, 'DailySchedule', {
+  schedule: events.Schedule.cron({ minute: '0', hour: '5' }),
+});
+regelRuleTarget(this, 'Sync', {
+  rule,
+  fn: syncFn,                              // created with functionName: 'regel-core-wit-sync'
+  name: 'regel-core-wit-sync',             // the same literal, never fn.functionName
+  missedRunAfter: cdk.Duration.hours(26),  // a daily rule plus 2 hours of grace; omit to skip
+});
+```
+
+What it creates, all to `regel-core-pipeline-alerts` (alarm actions only):
+
+- `<name>-eb-dlq`: EventBridge could not deliver (throttled, permission, function missing). Its queue policy admits `events.amazonaws.com` for this rule only.
+- `<name>-onfailure-dlq`: the function's `onFailure` destination. The handler raised and Lambda's retries are used up; the record holds the event and the error. A rule DLQ never sees these, so the handler must also raise on failure (EventBridge discards return values).
+- A depth alarm (`<queue>-not-empty`, >= 1 in one five-minute window) on each queue. One window on purpose: a message stays in the queue, so it fires on the first failure of a daily or weekly job.
+- Optional `<name>-missed-run`: `Invocations < 1` over `missedRunAfter`, for a rule that stops firing without any error. Daily or more often (at most 6 days); skipped while the rule is disabled; flips to ALARM once after the first deploy until the first run.
+
+Defaults match what the hand-written fixes ran with: rule target 2 retries and 2 hours (`retryAttempts`, `maxEventAge`); function async invoke 2 retries and 6 hours (`asyncRetryAttempts`, `asyncMaxEventAge`; set `0` for a job that must not run twice). `event` passes a `RuleTargetInput`; `alertsTopic` replaces the shared topic.
+
+It throws on the three mistakes that went silent in the fleet:
+
+- A `name` built from `fn.functionName`. Queue names must be literals: a queue named from the function makes the queue depend on the function while the function's role policy depends on the queue, a cycle CloudFormation rejects at deploy, not at synth.
+- An `alertsTopic` with a KMS key. CloudWatch and EventBridge cannot publish to a topic whose key policy does not admit them, and every alarm action fails without a sound. The queues are SSE-SQS for the same reason: the shared data key's policy does not admit `events.amazonaws.com`.
+- A rule, function and scope in different stacks.
+
+Also: do not set `onFailure`, `retryAttempts` or `maxEventAge` in the function's own props or call `configureAsyncInvoke` on it (one event invoke config per function). It adds no Errors alarm: for a job that runs less often than every ten minutes add a one-window `fn.metricErrors` alarm, because `mcpLambdaAlarms`'s 2-of-3 shape never fires for those.
 
 ## What does NOT belong here
 

@@ -36,3 +36,9 @@ export {
   McpLambdaAlarms,
   mcpLambdaAlarms,
 } from './mcp-alarms';
+
+export {
+  RegelRuleTargetProps,
+  RegelRuleTarget,
+  regelRuleTarget,
+} from './rule-target';
