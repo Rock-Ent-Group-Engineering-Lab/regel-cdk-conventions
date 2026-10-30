@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.regelRuleTarget = exports.mcpLambdaAlarms = exports.bedrockInvokeResources = exports.RegelAppInferenceProfile = exports.REGEL_BEDROCK_MODELS = exports.regelCoreBootstrapSynthesizer = exports.regelCoreSynthesizer = exports.applyClawTags = exports.applyRegelCoreTags = exports.CLAW_BOUNDARY_ARN = exports.REGEL_CORE_BOUNDARY_ARN = exports.REGEL_CORE_ENV = exports.REGEL_CORE_PROFILE = exports.REGEL_CORE_REGION = exports.REGEL_CORE_ACCOUNT = void 0;
+exports.regelSchedule = exports.regelRuleTarget = exports.mcpLambdaAlarms = exports.bedrockInvokeResources = exports.RegelAppInferenceProfile = exports.REGEL_BEDROCK_MODELS = exports.regelCoreBootstrapSynthesizer = exports.regelCoreSynthesizer = exports.applyClawTags = exports.applyRegelCoreTags = exports.CLAW_BOUNDARY_ARN = exports.REGEL_CORE_BOUNDARY_ARN = exports.REGEL_CORE_ENV = exports.REGEL_CORE_PROFILE = exports.REGEL_CORE_REGION = exports.REGEL_CORE_ACCOUNT = void 0;
 var account_1 = require("./account");
 Object.defineProperty(exports, "REGEL_CORE_ACCOUNT", { enumerable: true, get: function () { return account_1.REGEL_CORE_ACCOUNT; } });
 Object.defineProperty(exports, "REGEL_CORE_REGION", { enumerable: true, get: function () { return account_1.REGEL_CORE_REGION; } });
@@ -23,3 +23,5 @@ var mcp_alarms_1 = require("./mcp-alarms");
 Object.defineProperty(exports, "mcpLambdaAlarms", { enumerable: true, get: function () { return mcp_alarms_1.mcpLambdaAlarms; } });
 var rule_target_1 = require("./rule-target");
 Object.defineProperty(exports, "regelRuleTarget", { enumerable: true, get: function () { return rule_target_1.regelRuleTarget; } });
+var schedule_1 = require("./schedule");
+Object.defineProperty(exports, "regelSchedule", { enumerable: true, get: function () { return schedule_1.regelSchedule; } });

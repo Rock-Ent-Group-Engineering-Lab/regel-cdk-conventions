@@ -71,22 +71,38 @@ The operating contract is in [CLAUDE.md](CLAUDE.md#what-this-package-owns);
 the factory and compatibility notes live in
 [src/synthesizer.ts](src/synthesizer.ts).
 
-## Lambdas on EventBridge rules
+## Scheduled jobs
 
-`regelRuleTarget` attaches a Lambda to a rule with the failure handling every REGEL rule target needs: a rule DLQ, an `onFailure` destination on the function, a depth alarm on each queue and an optional missed-run alarm, all notifying the shared alerts topic. Available from v1.5.0.
+`regelSchedule` runs a Lambda or an ECS Fargate task on EventBridge Scheduler in Eastern time, with the failure handling every scheduled job needs: an execution role limited to the target and the DLQ, a DLQ with a depth alarm, a retry policy, the function's `onFailure` queue and an optional missed-run alarm, all notifying the shared alerts topic. Available from v1.6.0.
+
+```typescript
+import { regelSchedule } from 'regel-cdk-conventions';
+
+regelSchedule(this, 'Briefing', {
+  fn: briefingFn,                          // created with functionName: 'regel-core-sms-briefing'
+  name: 'regel-core-sms-briefing',         // the same literal, never fn.functionName
+  schedule: 'cron(15 7 ? * MON-FRI *)',    // 7:15 AM Eastern on weekdays (timeZone defaults to America/New_York)
+  missedRunAfter: cdk.Duration.hours(26),  // a daily schedule plus 2 hours of grace; omit to skip
+});
+```
+
+What it creates, the defaults and what it refuses: [CLAUDE.md](CLAUDE.md#schedules-regelschedule).
+
+## Lambdas on EventBridge event-pattern rules
+
+`regelRuleTarget` attaches a Lambda to an event-pattern rule with the failure handling every rule target needs: a rule DLQ, an `onFailure` destination on the function, a depth alarm on each queue and an optional missed-run alarm, all notifying the shared alerts topic. Available from v1.5.0.
 
 ```typescript
 import * as events from 'aws-cdk-lib/aws-events';
 import { regelRuleTarget } from 'regel-cdk-conventions';
 
-const rule = new events.Rule(this, 'DailySchedule', {
-  schedule: events.Schedule.cron({ minute: '0', hour: '5' }),
+const rule = new events.Rule(this, 'OnUpload', {
+  eventPattern: { source: ['aws.s3'], detailType: ['Object Created'] },
 });
-regelRuleTarget(this, 'Sync', {
+regelRuleTarget(this, 'Loader', {
   rule,
-  fn: syncFn,                              // created with functionName: 'regel-core-wit-sync'
-  name: 'regel-core-wit-sync',             // the same literal, never fn.functionName
-  missedRunAfter: cdk.Duration.hours(26),  // a daily rule plus 2 hours of grace; omit to skip
+  fn: loaderFn,                            // created with functionName: 'regel-core-wit-loader'
+  name: 'regel-core-wit-loader',           // the same literal, never fn.functionName
 });
 ```
 

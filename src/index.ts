@@ -42,3 +42,11 @@ export {
   RegelRuleTarget,
   regelRuleTarget,
 } from './rule-target';
+
+export {
+  RegelScheduleContainerOverride,
+  RegelScheduleEcsTask,
+  RegelScheduleProps,
+  RegelSchedule,
+  regelSchedule,
+} from './schedule';
