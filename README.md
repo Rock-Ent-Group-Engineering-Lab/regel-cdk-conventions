@@ -71,6 +71,27 @@ The operating contract is in [CLAUDE.md](CLAUDE.md#what-this-package-owns);
 the factory and compatibility notes live in
 [src/synthesizer.ts](src/synthesizer.ts).
 
+## Lambdas on EventBridge rules
+
+`regelRuleTarget` attaches a Lambda to a rule with the failure handling every REGEL rule target needs: a rule DLQ, an `onFailure` destination on the function, a depth alarm on each queue and an optional missed-run alarm, all notifying the shared alerts topic. Available from v1.5.0.
+
+```typescript
+import * as events from 'aws-cdk-lib/aws-events';
+import { regelRuleTarget } from 'regel-cdk-conventions';
+
+const rule = new events.Rule(this, 'DailySchedule', {
+  schedule: events.Schedule.cron({ minute: '0', hour: '5' }),
+});
+regelRuleTarget(this, 'Sync', {
+  rule,
+  fn: syncFn,                              // created with functionName: 'regel-core-wit-sync'
+  name: 'regel-core-wit-sync',             // the same literal, never fn.functionName
+  missedRunAfter: cdk.Duration.hours(26),  // a daily rule plus 2 hours of grace; omit to skip
+});
+```
+
+What it creates, the defaults and what it refuses: [CLAUDE.md](CLAUDE.md#rule-targets-regelruletarget).
+
 ## Migration path from legacy `tagging.ts`
 
 Every pipeline repo historically had its own copy of `infra/lib/config/tagging.ts` exporting `CLAW_BOUNDARY_ARN` and `applyClawTags`. Migration:
