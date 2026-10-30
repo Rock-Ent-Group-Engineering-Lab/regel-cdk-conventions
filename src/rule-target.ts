@@ -1,6 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
-import * as cwactions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -8,6 +7,9 @@ import * as destinations from 'aws-cdk-lib/aws-lambda-destinations';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
+import {
+  alertAction, checkLiteralName, checkMissedRunWindow, depthAlarm, failureQueue, missedRunAlarm,
+} from './failure-handling';
 
 /**
  * A Lambda behind an EventBridge rule, wired the REGEL way (fleet audit triage,
@@ -47,6 +49,9 @@ import { Construct } from 'constructs';
  *    and EventBridge cannot publish to it, and every alarm action fails without a
  *    sound (136 failed actions in 30 days on the Ringside topic). A topic you pass
  *    that carries a `masterKey` throws.
+ *
+ * For a job on a clock (a cron or rate expression) use regelSchedule (EventBridge Scheduler: Eastern time,
+ * its own retry and DLQ). This helper is for event-pattern rules.
  *
  * Covers Lambda targets on a rule in the same stack. ECS-task and SNS targets
  * keep their own `deadLetterQueue`; S3- and SNS-triggered functions set
@@ -109,28 +114,12 @@ export interface RegelRuleTarget {
   readonly missedRunAlarm?: cloudwatch.Alarm;
 }
 
-const ALERTS_TOPIC_NAME = 'regel-core-pipeline-alerts';
-const FIVE_MINUTES = cdk.Duration.minutes(5);
 /** `<name>-onfailure-dlq` must fit SQS's 80 character queue name limit. */
 const MAX_NAME_LENGTH = 66;
-const MAX_MISSED_RUN_SECONDS = 6 * 24 * 60 * 60;
 
 export function regelRuleTarget(scope: Construct, id: string, props: RegelRuleTargetProps): RegelRuleTarget {
   const { name } = props;
-  if (cdk.Token.isUnresolved(name)) {
-    throw new Error(
-      `regelRuleTarget(${id}): name must be a literal string, not a token. A queue named from ` +
-      '`fn.functionName` makes the queue depend on the function and the function\'s role policy ' +
-      'depend on the queue, a cycle CloudFormation rejects at deploy. Pass the same literal you ' +
-      'gave the function\'s functionName.',
-    );
-  }
-  if (!/^[A-Za-z0-9_-]+$/.test(name) || name.length > MAX_NAME_LENGTH) {
-    throw new Error(
-      `regelRuleTarget(${id}): name "${name}" must be letters, digits, "-" or "_", at most ` +
-      `${MAX_NAME_LENGTH} characters (the queue "<name>-onfailure-dlq" has to fit SQS's 80).`,
-    );
-  }
+  checkLiteralName('regelRuleTarget', id, name, MAX_NAME_LENGTH, 'the queue "<name>-onfailure-dlq" has to fit SQS\'s 80');
   const stack = cdk.Stack.of(scope);
   if (cdk.Stack.of(props.rule) !== stack || cdk.Stack.of(props.fn) !== stack) {
     throw new Error(
@@ -139,55 +128,15 @@ export function regelRuleTarget(scope: Construct, id: string, props: RegelRuleTa
     );
   }
   const missedRunAfter = props.missedRunAfter;
-  if (missedRunAfter) {
-    const seconds = missedRunAfter.toSeconds();
-    if (seconds < 60 || seconds % 60 !== 0 || seconds > MAX_MISSED_RUN_SECONDS) {
-      throw new Error(
-        `regelRuleTarget(${id}): missedRunAfter must be whole minutes between 1 minute and 6 days ` +
-        '(an Invocations alarm cannot look back 7 days, so a weekly rule needs a freshness metric).',
-      );
-    }
-  }
+  checkMissedRunWindow('regelRuleTarget', id, missedRunAfter, 'rule');
 
-  const alertsTopic = props.alertsTopic ?? sns.Topic.fromTopicArn(
-    scope, `${id}AlertsTopic`,
-    `arn:aws:sns:${stack.region}:${stack.account}:${ALERTS_TOPIC_NAME}`,
-  );
-  if (alertsTopic.masterKey) {
-    throw new Error(
-      `regelRuleTarget(${id}): the alerts topic is KMS-encrypted. CloudWatch and EventBridge cannot ` +
-      `publish to a topic whose key policy does not admit them, so every alarm action fails without ` +
-      `a sound. Use ${ALERTS_TOPIC_NAME} or an unencrypted topic (alert messages carry no customer data).`,
-    );
-  }
-  const alert = new cwactions.SnsAction(alertsTopic);
+  const alert = alertAction('regelRuleTarget', scope, id, props.alertsTopic);
 
   const ruleQueueName = `${name}-eb-dlq`;
   const onFailureQueueName = `${name}-onfailure-dlq`;
 
-  const failureQueue = (queueId: string, queueName: string): sqs.Queue =>
-    new sqs.Queue(scope, queueId, {
-      queueName,
-      retentionPeriod: cdk.Duration.days(14),
-      encryption: sqs.QueueEncryption.SQS_MANAGED,
-      enforceSSL: true,
-    });
-  const depthAlarm = (alarmId: string, queue: sqs.Queue, queueName: string, description: string): cloudwatch.Alarm => {
-    const alarm = new cloudwatch.Alarm(scope, alarmId, {
-      alarmName: `${queueName}-not-empty`,
-      alarmDescription: description,
-      metric: queue.metricApproximateNumberOfMessagesVisible({ period: FIVE_MINUTES, statistic: 'Maximum' }),
-      threshold: 1,
-      evaluationPeriods: 1,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-    });
-    alarm.addAlarmAction(alert);
-    return alarm;
-  };
-
-  const ruleDlq = failureQueue(`${id}EbDlq`, ruleQueueName);
-  const onFailureDlq = failureQueue(`${id}OnFailureDlq`, onFailureQueueName);
+  const ruleDlq = failureQueue(scope, `${id}EbDlq`, ruleQueueName);
+  const onFailureDlq = failureQueue(scope, `${id}OnFailureDlq`, onFailureQueueName);
 
   // addTarget binds the target, which adds the queue policy that admits
   // events.amazonaws.com with aws:SourceArn pinned to this rule.
@@ -204,19 +153,21 @@ export function regelRuleTarget(scope: Construct, id: string, props: RegelRuleTa
   });
 
   const ruleDlqAlarm = depthAlarm(
-    `${id}EbDlqDepthAlarm`, ruleDlq, ruleQueueName,
+    scope, `${id}EbDlqDepthAlarm`, ruleDlq, ruleQueueName,
     `${name}: EventBridge could not deliver an event to the function (throttled, permission, or ` +
     `function missing). The event is waiting in ${ruleQueueName}; read it, fix the cause, then ` +
     `redrive or purge. Errors the handler raises do not land here, see ${onFailureQueueName}.`,
+    alert,
   );
   const onFailureDlqAlarm = depthAlarm(
-    `${id}OnFailureDlqDepthAlarm`, onFailureDlq, onFailureQueueName,
+    scope, `${id}OnFailureDlqDepthAlarm`, onFailureDlq, onFailureQueueName,
     `${name}: an asynchronous invocation failed after its retries (the handler raised, or the event ` +
     `aged out). The invocation record, with the event and the error, is waiting in ` +
     `${onFailureQueueName}. Read it, fix the cause, then replay or purge.`,
+    alert,
   );
 
-  let missedRunAlarm: cloudwatch.Alarm | undefined;
+  let missedRun: cloudwatch.Alarm | undefined;
   if (missedRunAfter) {
     const state = (props.rule.node.defaultChild as events.CfnRule | undefined)?.state;
     if (state === 'DISABLED') {
@@ -225,22 +176,16 @@ export function regelRuleTarget(scope: Construct, id: string, props: RegelRuleTa
         'It appears on the deploy that enables the rule.',
       );
     } else {
-      missedRunAlarm = new cloudwatch.Alarm(scope, `${id}MissedRunAlarm`, {
-        alarmName: `${name}-missed-run`,
-        alarmDescription:
-          `${name}: the function has not been invoked for ${missedRunAfter.toHumanString()}. The rule ` +
-          'is disabled, EventBridge is not delivering, or the schedule changed. Nothing errors in this ' +
-          'state, so this alarm is the only signal. It flips to ALARM once right after the first ' +
-          'deploy, until the first run.',
-        metric: props.fn.metricInvocations({ period: missedRunAfter, statistic: 'Sum' }),
-        threshold: 1,
-        evaluationPeriods: 1,
-        comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-        treatMissingData: cloudwatch.TreatMissingData.BREACHING,
-      });
-      missedRunAlarm.addAlarmAction(alert);
+      missedRun = missedRunAlarm(
+        scope, `${id}MissedRunAlarm`, name, props.fn, missedRunAfter,
+        `${name}: the function has not been invoked for ${missedRunAfter.toHumanString()}. The rule ` +
+        'is disabled, EventBridge is not delivering, or the schedule changed. Nothing errors in this ' +
+        'state, so this alarm is the only signal. It flips to ALARM once right after the first ' +
+        'deploy, until the first run.',
+        alert,
+      );
     }
   }
 
-  return { ruleDlq, ruleDlqAlarm, onFailureDlq, onFailureDlqAlarm, missedRunAlarm };
+  return { ruleDlq, ruleDlqAlarm, onFailureDlq, onFailureDlqAlarm, missedRunAlarm: missedRun };
 }

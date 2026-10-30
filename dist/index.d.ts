@@ -5,3 +5,4 @@ export { BootstrapSynthesizerOptions, regelCoreSynthesizer, regelCoreBootstrapSy
 export { REGEL_BEDROCK_MODELS, RegelBedrockModelId, RegelAppInferenceProfile, RegelAppInferenceProfileProps, bedrockInvokeResources, } from './bedrock-aip';
 export { McpLambdaAlarmsProps, McpLambdaAlarms, mcpLambdaAlarms, } from './mcp-alarms';
 export { RegelRuleTargetProps, RegelRuleTarget, regelRuleTarget, } from './rule-target';
+export { RegelScheduleContainerOverride, RegelScheduleEcsTask, RegelScheduleProps, RegelSchedule, regelSchedule, } from './schedule';

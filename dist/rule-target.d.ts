@@ -44,6 +44,9 @@ import { Construct } from 'constructs';
  *    sound (136 failed actions in 30 days on the Ringside topic). A topic you pass
  *    that carries a `masterKey` throws.
  *
+ * For a job on a clock (a cron or rate expression) use regelSchedule (EventBridge Scheduler: Eastern time,
+ * its own retry and DLQ). This helper is for event-pattern rules.
+ *
  * Covers Lambda targets on a rule in the same stack. ECS-task and SNS targets
  * keep their own `deadLetterQueue`; S3- and SNS-triggered functions set
  * `configureAsyncInvoke` themselves.
